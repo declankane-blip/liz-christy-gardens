@@ -23,7 +23,7 @@ Import this repo in Vercel (Add New > Project > Deploy, no settings needed), or 
 
 ## After the first deploy
 
-- If your address is not https://liz-christy-garden.vercel.app, replace it in the four lines near the top of `index.html` that contain it. Link previews depend on it.
+- If your address is not https://liz-christy-gardens.vercel.app, replace it in the four lines near the top of `index.html` that contain it. Link previews depend on it.
 - Test the link preview at https://developers.facebook.com/tools/debug ("Scrape Again").
 - There are no sign-up forms. Volunteering needs none (people walk in on an open day), and a public site has nowhere to store emails without a service like Mailchimp or Buttondown.
 - If open hours change, edit the hours in `index.html`, `js/main.js` (`nextOpen` and the status block), and `open-hours.ics`.

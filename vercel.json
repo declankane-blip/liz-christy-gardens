@@ -1,6 +1,8 @@
 {
   "cleanUrls": true,
   "headers": [
-    { "source": "/share.png", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] }
+    { "source": "/share.png", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }] },
+    { "source": "/fonts/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] },
+    { "source": "/open-hours.ics", "headers": [{ "key": "Content-Type", "value": "text/calendar; charset=utf-8" }] }
   ]
 }

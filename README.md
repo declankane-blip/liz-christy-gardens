@@ -6,7 +6,7 @@ Static site (no build step), ready for Vercel.
 index.html      page markup (all five views: home, visit, history, volunteer, donate)
 css/styles.css  styles
 js/main.js      hash router, open-hours status, copy-address button
-fonts/          Young Serif and Karla, self-hosted
+fonts/          Bevan, Special Elite and Old Standard TT, self-hosted
 images/         site photos
 open-hours.ics  calendar file visitors can add to their phone
 share.png       link-preview image

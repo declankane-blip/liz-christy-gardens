@@ -23,3 +23,9 @@ button.league small { display:block; font-weight:400; color:var(--muted); }
 .start { color:var(--good); } .sit { color:var(--bad); } .warn { color:var(--warn); }
 .summary { padding:12px 14px; border-radius:10px; background:var(--card); border:1px solid var(--line); margin-top:16px; }
 #status.error { color:var(--bad); }
+
+.tabs { display:flex; gap:8px; margin-top:20px; }
+.tabs button { background:var(--card); color:var(--fg); border:1px solid var(--line); }
+.tabs button[aria-pressed="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+details { flex-basis:100%; } summary { cursor:pointer; color:var(--accent); font-weight:600; }
+details label { margin-top:8px; } code { font-size:.85em; }

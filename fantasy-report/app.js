@@ -1,5 +1,7 @@
 import * as sleeper from './sleeper.js';
 import { buildPlayers, buildReport } from './analysis.js';
+import * as espn from './espn.js';
+import { adaptEspn, teamLabel } from './espn-adapter.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -67,7 +69,7 @@ async function run(summary) {
   }
 }
 
-const matchup = (p) => (p.playing ? `${p.team} vs ${p.opp}` : `${p.team || ''} (bye)`);
+const matchup = (p) => (p.playing ? (p.opp ? `${p.team} vs ${p.opp}` : `${p.team || ''}`) : `${p.team || ''} (bye)`);
 const pts = (n) => (typeof n === 'number' ? n.toFixed(1) : '-');
 
 function playerLine(p, extra = '') {
@@ -75,7 +77,7 @@ function playerLine(p, extra = '') {
   return `<span class="who">${esc(p.name)}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${extra}</small></span>`;
 }
 
-function render(leagueName, week, r) {
+function render(leagueName, week, r, trendUnit = 'adds') {
   const summary = !r.hasCurrent
     ? `Your best lineup projects to <b>${pts(r.bestTotal)}</b> points.`
     : r.changesNeeded
@@ -100,7 +102,7 @@ function render(leagueName, week, r) {
     : '<div class="row muted">No injury or bye issues on your roster.</div>';
 
   const pickups = r.pickups.length
-    ? r.pickups.map((u) => `<div class="row">${playerLine(u.player, u.adds ? ` · ${u.adds.toLocaleString()} adds in 48h` : '')}
+    ? r.pickups.map((u) => `<div class="row">${playerLine(u.player, u.adds ? (trendUnit === 'pct' ? ` · +${u.adds}% rostered this week` : ` · ${u.adds.toLocaleString()} adds in 48h`) : '')}
         <span class="who muted">${u.starts && u.delta >= 1 ? `Would start: +${pts(u.delta)} pts` : 'Trending, not a starter for you'}${u.drop ? `<small>Drop: ${esc(u.drop.name)} (${pts(u.drop.adj)})</small>` : ''}</span>
         <span class="pts">${pts(u.player.adj)}</span></div>`).join('')
     : '<div class="row muted">Nothing on waivers would improve your lineup this week.</div>';
@@ -118,4 +120,56 @@ function render(leagueName, week, r) {
     <p class="muted">Points are projected for your league's scoring and reduced for injury designations.</p>`;
   $('report').hidden = false;
   $('report').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---------- ESPN ----------
+let platform = 'sleeper';
+document.querySelectorAll('[data-platform]').forEach((b) => b.addEventListener('click', () => {
+  platform = b.dataset.platform;
+  document.querySelectorAll('[data-platform]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  $('lookup').hidden = platform !== 'sleeper';
+  $('espn-form').hidden = platform !== 'espn';
+  $('leagues').hidden = true;
+  $('report').hidden = true;
+  setStatus('');
+}));
+
+$('espn-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('leagues').hidden = true;
+  $('report').hidden = true;
+  const id = $('espn-id').value.trim();
+  const cookies = { s2: $('espn-s2').value.trim(), swid: $('espn-swid').value.trim() };
+  const year = espn.seasonYear();
+  try {
+    setStatus('Loading your ESPN league...');
+    const leagueData = await espn.getLeague(year, id, cookies);
+    const teams = leagueData.teams || [];
+    $('league-list').innerHTML = teams
+      .map((t) => `<button class="league" data-i="${t.id}">${esc(teamLabel(t))}<small>${esc(leagueData.settings?.name || 'ESPN league')}</small></button>`)
+      .join('');
+    $('league-list').onclick = (ev) => {
+      const b = ev.target.closest('button.league');
+      if (b) runEspn({ year, id, cookies, leagueData, teamId: b.dataset.i, name: teamLabel(teams.find((t) => t.id === Number(b.dataset.i))) });
+    };
+    document.querySelector('#leagues h2').textContent = 'Pick your team';
+    $('leagues').hidden = false;
+    setStatus('');
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+});
+
+async function runEspn({ year, id, cookies, leagueData, teamId, name }) {
+  $('report').hidden = true;
+  try {
+    setStatus(`Building report for ${name}...`);
+    const week = leagueData.scoringPeriodId;
+    const freeAgentData = await espn.getFreeAgents(year, id, week, cookies);
+    const a = adaptEspn({ leagueData, freeAgentData, teamId, week });
+    render(name, week, buildReport({ ...a, dropAlertThreshold: Infinity }), 'pct');
+    setStatus('');
+  } catch (err) {
+    setStatus(err.message, true);
+  }
 }

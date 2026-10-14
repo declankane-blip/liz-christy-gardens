@@ -25,6 +25,13 @@ const NEWS_WINDOW_MS = 72 * 3600 * 1000;
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
+/** Projection discounted for injury designation; zero when the team has no game. */
+export function adjustedPoints(proj, status, playing) {
+  if (!playing) return 0;
+  const factor = status in STATUS_FACTOR ? STATUS_FACTOR[status] : 1;
+  return round1(proj * factor);
+}
+
 /** Projected fantasy points using the league's own scoring settings. */
 export function scoreStats(stats, scoring) {
   let total = 0;
@@ -52,7 +59,6 @@ export function buildPlayers(projectionRows, scoring, { now = Date.now() } = {})
     if (!SLOT_ELIGIBILITY[pos]) continue;
     const proj = scoreStats(row.stats, scoring);
     const status = p.injury_status || null;
-    const factor = status in STATUS_FACTOR ? STATUS_FACTOR[status] : 1;
     const newsAt = p.news_updated || null;
     players.set(String(row.player_id), {
       id: String(row.player_id),
@@ -62,7 +68,7 @@ export function buildPlayers(projectionRows, scoring, { now = Date.now() } = {})
       opp: row.opponent || null,
       playing: Boolean(row.opponent),
       proj: round1(proj),
-      adj: round1(row.opponent ? proj * factor : 0),
+      adj: adjustedPoints(proj, status, Boolean(row.opponent)),
       status,
       note: p.injury_notes || null,
       bodyPart: p.injury_body_part || null,
@@ -124,7 +130,7 @@ function describeIssue(p) {
  *  - extraNames: Map id -> {name,pos,team} for rostered players with no projection (byes)
  *  - trending: { add: [{player_id,count}], drop: [{player_id,count}] }
  */
-export function buildReport({ league, roster, allRosters, projections, extraNames = new Map(), trending = {} }) {
+export function buildReport({ league, roster, allRosters, projections, extraNames = new Map(), trending = {}, dropAlertThreshold = 100000 }) {
   const { slots, unsupported } = startingSlots(league.roster_positions);
   const reserve = new Set([...(roster.reserve || []), ...(roster.taxi || [])].map(String));
   const myIds = (roster.players || []).map(String);
@@ -147,8 +153,12 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   const best = optimizeLineup(slots, eligible);
   const bestTotal = lineupTotal(best);
   const startersNow = (roster.starters || []).map(String);
+  // roster.starters lines up with every non-bench slot, including IDP slots we skip.
+  const starterIdAt = [];
+  (league.roster_positions || []).filter((s) => !['BN', 'IR', 'TAXI'].includes(s))
+    .forEach((s, i) => { if (SLOT_ELIGIBILITY[s]) starterIdAt.push(startersNow[i]); });
   const currentLineup = slots.map((slot, i) => {
-    const id = startersNow[i];
+    const id = starterIdAt[i];
     const player = id && id !== '0' ? lookup(id) : null;
     return { slot, index: i, player };
   });
@@ -173,7 +183,7 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   // news timestamp updates for nearly everyone each week, so it is not a useful filter on its own)
   const news = mine
     .map((p) => ({ player: p, issue: describeIssue(p), trendDrop: trendDrop.get(p.id) || 0, onIR: reserve.has(p.id) }))
-    .filter((n) => n.issue || n.trendDrop > 100000)
+    .filter((n) => n.issue || n.trendDrop > dropAlertThreshold)
     .map((n) => ({ ...n, starting: recommendedIds.has(n.player.id) }))
     .sort((a, b) => Number(b.starting) - Number(a.starting) || b.player.proj - a.player.proj);
 

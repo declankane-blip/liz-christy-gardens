@@ -1,0 +1,25 @@
+:root { --bg:#f7f6f2; --fg:#1d2420; --muted:#66706a; --card:#fff; --line:#e1ded5; --accent:#1f6b43; --bad:#b3261e; --warn:#a66300; --good:#1f6b43; }
+@media (prefers-color-scheme: dark) { :root { --bg:#121513; --fg:#e8ebe9; --muted:#98a39c; --card:#1b201d; --line:#2c332f; --accent:#5fc58b; --bad:#ff8a80; --warn:#f2b45a; --good:#5fc58b; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui,sans-serif; }
+header, main, footer { max-width:760px; margin:0 auto; padding:0 16px; }
+header { padding-top:28px; }
+h1 { margin:0; font-size:1.7rem; } h2 { margin:28px 0 10px; font-size:1.2rem; }
+header p, footer, .muted { color:var(--muted); }
+footer { padding:32px 16px; font-size:.85rem; }
+form { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin:20px 0 8px; }
+label { display:flex; flex-direction:column; gap:4px; font-size:.9rem; flex:1 1 220px; }
+input { padding:10px; font:inherit; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--fg); }
+button { padding:10px 16px; font:inherit; font-weight:600; border:0; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; }
+button.league { display:block; width:100%; margin-bottom:8px; text-align:left; background:var(--card); color:var(--fg); border:1px solid var(--line); }
+button.league small { display:block; font-weight:400; color:var(--muted); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:4px 14px; }
+.row { display:flex; gap:10px; align-items:baseline; padding:9px 0; border-bottom:1px solid var(--line); }
+.row:last-child { border-bottom:0; }
+.slot { width:3.4rem; flex:none; font-size:.75rem; font-weight:700; color:var(--muted); }
+.who { flex:1; } .who small { display:block; color:var(--muted); }
+.pts { font-variant-numeric:tabular-nums; font-weight:600; }
+.tag { font-size:.72rem; font-weight:700; padding:1px 6px; border-radius:4px; border:1px solid currentColor; }
+.start { color:var(--good); } .sit { color:var(--bad); } .warn { color:var(--warn); }
+.summary { padding:12px 14px; border-radius:10px; background:var(--card); border:1px solid var(--line); margin-top:16px; }
+#status.error { color:var(--bad); }

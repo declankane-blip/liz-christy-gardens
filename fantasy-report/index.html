@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weekly Fantasy Report</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Weekly Fantasy Report</h1>
+    <p>Start/sit, player news and waiver pickups for your Sleeper team.</p>
+  </header>
+  <main>
+    <form id="lookup">
+      <label>Sleeper username
+        <input id="username" autocomplete="off" autocapitalize="off" required>
+      </label>
+      <button>Find my leagues</button>
+    </form>
+    <p id="status" role="status"></p>
+    <section id="leagues" hidden>
+      <h2>Pick a league</h2>
+      <div id="league-list"></div>
+    </section>
+    <section id="report" hidden></section>
+  </main>
+  <footer>Data from Sleeper. Projections are estimates, not guarantees.</footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

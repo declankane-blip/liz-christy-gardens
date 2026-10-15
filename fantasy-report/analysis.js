@@ -105,7 +105,8 @@ export function optimizeLineup(slots, candidates) {
   const order = slots
     .map((slot, index) => ({ slot, index }))
     .sort((a, b) => SLOT_ELIGIBILITY[a.slot].length - SLOT_ELIGIBILITY[b.slot].length || a.index - b.index);
-  const pool = [...candidates].sort((a, b) => rank(b) - rank(a) || b.proj - a.proj);
+  // Never start a player projected for zero (out, on bye, suspended): leave the slot open instead.
+  const pool = candidates.filter((p) => p.adj > 0).sort((a, b) => rank(b) - rank(a) || b.proj - a.proj);
   const used = new Set();
   const out = new Array(slots.length);
   for (const { slot, index } of order) {
@@ -171,7 +172,9 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   const currentTotal = lineupTotal(currentLineup);
   const gain = round1(bestTotal - currentTotal);
   const hasCurrent = startersNow.length > 0;
-  const changesNeeded = !hasCurrent || gain >= MARGINAL_POINTS;
+  const bestIds = new Set(best.map((s) => s.player?.id).filter(Boolean));
+  const startsZero = currentLineup.some((s) => s.player && s.player.adj <= 0 && !bestIds.has(s.player.id));
+  const changesNeeded = !hasCurrent || gain >= MARGINAL_POINTS || startsZero;
   const recommended = changesNeeded ? best : currentLineup;
   const recommendedIds = new Set(recommended.map((s) => s.player?.id).filter(Boolean));
 
@@ -232,7 +235,7 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     bench,
     bestTotal: round1(bestTotal),
     currentTotal: round1(currentTotal),
-    gain: changesNeeded ? gain : 0,
+    gain: changesNeeded ? Math.max(gain, 0) : 0,
     changesNeeded,
     hasCurrent,
     unsupported,

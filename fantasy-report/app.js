@@ -86,8 +86,8 @@ function render(leagueName, week, r, trendUnit = 'adds') {
 
   const lineup = r.lineup.map((s) => `
     <div class="row"><span class="slot">${esc(s.slot.replace('_', ' '))}</span>
-      ${s.player ? playerLine(s.player, s.changed && s.current ? ` · replaces ${esc(s.current.name)}` : '') : '<span class="who muted">Empty</span>'}
-      ${s.changed ? '<span class="tag start">START</span>' : ''}
+      ${s.player ? playerLine(s.player, s.changed && s.current ? ` · replaces ${esc(s.current.name)}` : '') : `<span class="who muted">Open: no one eligible is projected for points${s.current ? ` (bench ${esc(s.current.name)})` : ''}</span>`}
+      ${s.changed && s.player ? '<span class="tag start">START</span>' : ''}
       <span class="pts">${pts(s.player?.adj)}</span></div>`).join('');
 
   const benchRows = r.bench.map((p) => {

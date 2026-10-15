@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weekly Fantasy Report</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Weekly Fantasy Report</h1>
+    <p>Start/sit, player news and waiver pickups for your Sleeper team.</p>
+  </header>
+  <main>
+    <div class="tabs" role="group" aria-label="Fantasy platform">
+      <button type="button" data-platform="sleeper" aria-pressed="true">Sleeper</button>
+      <button type="button" data-platform="espn" aria-pressed="false">ESPN</button>
+    </div>
+    <form id="lookup">
+      <label>Sleeper username
+        <input id="username" autocomplete="off" autocapitalize="off" required>
+      </label>
+      <button>Find my leagues</button>
+    </form>
+    <form id="espn-form" hidden>
+      <label>ESPN league ID
+        <input id="espn-id" inputmode="numeric" pattern="[0-9]+" autocomplete="off" required>
+        <small class="muted">The number after leagueId= in your league's URL</small>
+      </label>
+      <details>
+        <summary>Private league?</summary>
+        <p class="muted">Public leagues need nothing here. For private leagues, copy the <code>espn_s2</code> and <code>SWID</code> cookies from espn.com (browser dev tools, Application/Storage, Cookies). They are sent only to ESPN through this site and are not stored.</p>
+        <label>espn_s2 <input id="espn-s2" autocomplete="off"></label>
+        <label>SWID <input id="espn-swid" autocomplete="off" placeholder="{XXXXXXXX-XXXX-...}"></label>
+      </details>
+      <button>Find my team</button>
+    </form>
+    <p id="status" role="status"></p>
+    <section id="leagues" hidden>
+      <h2>Pick a league</h2>
+      <div id="league-list"></div>
+    </section>
+    <section id="report" hidden></section>
+  </main>
+  <footer>Data from Sleeper. Projections are estimates, not guarantees.</footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

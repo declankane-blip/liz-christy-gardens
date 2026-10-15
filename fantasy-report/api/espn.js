@@ -5,7 +5,7 @@
 const HOST = 'https://lm-api-reads.fantasy.espn.com';
 const PATH_OK = /^\/apis\/v3\/games\/ffl\/seasons\/\d{4}\/segments\/0\/leagues\/\d{1,12}$/;
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const { path, ...rest } = req.query || {};
   if (typeof path !== 'string' || !PATH_OK.test(path)) {
     res.statusCode = 400;
@@ -30,4 +30,4 @@ module.exports = async function handler(req, res) {
     res.statusCode = 502;
     res.end(JSON.stringify({ error: 'Could not reach ESPN' }));
   }
-};
+}

@@ -1,12 +1,11 @@
-// Local dev: serves the repo statically and mounts api/espn.js like Vercel does.
+// Local dev: serves this folder statically and mounts api/espn.js like Vercel does.
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const espn = createRequire(import.meta.url)(path.join(root, 'api/espn.js'));
+const root = path.dirname(fileURLToPath(import.meta.url));
+const { default: espn } = await import('./api/espn.js');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
 
 http.createServer((req, res) => {
@@ -22,4 +21,4 @@ http.createServer((req, res) => {
   if (!fs.existsSync(file)) { res.statusCode = 404; return res.end('Not found'); }
   res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
   fs.createReadStream(file).pipe(res);
-}).listen(process.env.PORT || 8000, () => console.log('http://localhost:' + (process.env.PORT || 8000) + '/fantasy-report/'));
+}).listen(process.env.PORT || 8000, () => console.log('http://localhost:' + (process.env.PORT || 8000) + '/'));

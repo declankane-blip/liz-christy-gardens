@@ -22,7 +22,7 @@ const leagueData = {
   ],
 };
 const freeAgentData = { players: [
-  { id: 50, player: { ...pool(50, 3, 16).playerPoolEntry.player, ownership: { percentChange: 4.2 } } },
+  { id: 50, player: { ...pool(50, 3, 16).playerPoolEntry.player, ownership: { percentChange: 4.2, percentOwned: 38.5 } } },
   { id: 51, player: { ...pool(51, 4, 2).playerPoolEntry.player, ownership: { percentChange: -1 } } },
 ] };
 
@@ -35,5 +35,6 @@ test('adapts ESPN data and reports start/sit plus waiver pickup', () => {
   assert.ok(wrs.some((s) => s.changed && s.current.id === '5' && s.player.id === '8'));
   assert.equal(rep.pickups[0].player.id, '50');
   assert.equal(rep.pickups[0].adds, 4.2);
+  assert.equal(rep.pickups[0].player.rostered, 38.5);
   assert.ok(rep.news.some((n) => n.player.id === '5') && rep.news.some((n) => n.player.id === '11'));
 });

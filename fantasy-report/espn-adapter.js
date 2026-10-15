@@ -39,6 +39,7 @@ export function toPlayer(poolEntry, week) {
     note: null,
     bodyPart: null,
     recentNews: false,
+    rostered: typeof p.ownership?.percentOwned === 'number' ? round1(p.ownership.percentOwned) : null,
   };
 }
 

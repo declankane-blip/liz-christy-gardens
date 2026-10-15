@@ -45,3 +45,19 @@ test('already-optimal lineup is left alone', () => {
   assert.equal(rep.changesNeeded, false);
   assert.equal(rep.pickups.length, 0);
 });
+
+test('roster % breaks a near tie but not a clear projection gap', () => {
+  const mk = (id, adj, rostered) => ({ id, pos: 'WR', adj, proj: adj, rostered });
+  const slots = ['WR'];
+  assert.equal(optimizeLineup(slots, [mk('a', 10.0, 20), mk('b', 9.8, 95)])[0].player.id, 'b');
+  assert.equal(optimizeLineup(slots, [mk('a', 12.0, 20), mk('b', 9.8, 95)])[0].player.id, 'a');
+});
+
+test('popular free agent surfaces even without a lineup gain', () => {
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'RB', 14), row('4', 'RB', 13), row('5', 'WR', 12), row('9', 'WR', 6)];
+  const projections = buildPlayers(rows, {});
+  projections.get('9').rostered = 72;
+  const roster = { players: ['1', '2', '3', '4', '5'], starters: ['1', '2', '3', '5', '4'] };
+  const rep = buildReport({ league, roster, allRosters: [roster], projections });
+  assert.equal(rep.pickups[0].player.id, '9');
+});

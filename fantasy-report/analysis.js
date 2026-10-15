@@ -20,10 +20,15 @@ const STATUS_FACTOR = {
   Questionable: 0.92,
 };
 
+// Roster % is market consensus. It nudges close calls: a player rostered everywhere is worth up to
+// this many extra points when ranking, never when summing a lineup's projected total.
+const ROSTER_WEIGHT = 1.5;
+const POPULAR_FREE_AGENT = 50; // % rostered at which a free agent is worth surfacing on its own
 const MARGINAL_POINTS = 1.0; // swaps worth less than this are called toss-ups
 const NEWS_WINDOW_MS = 72 * 3600 * 1000;
 
 const round1 = (n) => Math.round(n * 10) / 10;
+const rank = (p) => p.adj + ((p.rostered ?? 0) / 100) * ROSTER_WEIGHT;
 
 /** Projection discounted for injury designation; zero when the team has no game. */
 export function adjustedPoints(proj, status, playing) {
@@ -73,6 +78,7 @@ export function buildPlayers(projectionRows, scoring, { now = Date.now() } = {})
       note: p.injury_notes || null,
       bodyPart: p.injury_body_part || null,
       recentNews: Boolean(newsAt && now - newsAt <= NEWS_WINDOW_MS),
+      rostered: null,
     });
   }
   return players;
@@ -99,7 +105,7 @@ export function optimizeLineup(slots, candidates) {
   const order = slots
     .map((slot, index) => ({ slot, index }))
     .sort((a, b) => SLOT_ELIGIBILITY[a.slot].length - SLOT_ELIGIBILITY[b.slot].length || a.index - b.index);
-  const pool = [...candidates].sort((a, b) => b.adj - a.adj || b.proj - a.proj);
+  const pool = [...candidates].sort((a, b) => rank(b) - rank(a) || b.proj - a.proj);
   const used = new Set();
   const out = new Array(slots.length);
   for (const { slot, index } of order) {
@@ -142,7 +148,7 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     if (p) return p;
     const e = extraNames.get(id) || {};
     return { id, name: e.name || `Player ${id}`, pos: e.pos || '?', team: e.team || null, opp: null, playing: false,
-      proj: 0, adj: 0, status: null, note: null, bodyPart: null, recentNews: false };
+      proj: 0, adj: 0, status: null, note: null, bodyPart: null, recentNews: false, rostered: null };
   };
 
   const mine = myIds.map(lookup);
@@ -201,7 +207,8 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     if (topByPos[p.pos] <= 8) shortlist.push(p);
   }
   for (const p of freeAgents) {
-    if (trendAdd.has(p.id) && !shortlist.includes(p) && shortlist.length < 80) shortlist.push(p);
+    const popular = (p.rostered ?? 0) >= POPULAR_FREE_AGENT;
+    if ((trendAdd.has(p.id) || popular) && !shortlist.includes(p) && shortlist.length < 80) shortlist.push(p);
   }
 
   const pickups = [];
@@ -212,12 +219,13 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     const keep = new Set(withFa.map((s) => s.player?.id).filter(Boolean));
     const drop = eligible
       .filter((p) => !keep.has(p.id))
-      .sort((a, b) => a.adj - b.adj || a.proj - b.proj)[0] || null;
+      .sort((a, b) => rank(a) - rank(b) || a.proj - b.proj)[0] || null;
     const adds = trendAdd.get(fa.id) || 0;
-    if (!(starts && delta >= MARGINAL_POINTS) && adds === 0) continue;
+    const popular = (fa.rostered ?? 0) >= POPULAR_FREE_AGENT;
+    if (!(starts && delta >= MARGINAL_POINTS) && adds === 0 && !popular) continue;
     pickups.push({ player: fa, delta, starts, drop, adds });
   }
-  pickups.sort((a, b) => b.delta - a.delta || b.adds - a.adds || b.player.adj - a.player.adj);
+  pickups.sort((a, b) => b.delta - a.delta || (b.player.rostered ?? 0) - (a.player.rostered ?? 0) || b.adds - a.adds || b.player.adj - a.player.adj);
 
   return {
     lineup,

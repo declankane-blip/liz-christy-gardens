@@ -61,3 +61,16 @@ test('popular free agent surfaces even without a lineup gain', () => {
   const rep = buildReport({ league, roster, allRosters: [roster], projections });
   assert.equal(rep.pickups[0].player.id, '9');
 });
+
+test('never starts a zero-point player; leaves the slot open and benches him', () => {
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'RB', 14), row('5', 'WR', 9, { noGame: true }), row('4', 'RB', 5)];
+  const projections = buildPlayers(rows, {});
+  const roster = { players: ['1', '2', '3', '4', '5'], starters: ['1', '2', '3', '5', '4'] };
+  const rep = buildReport({ league, roster, allRosters: [roster], projections });
+  assert.equal(rep.changesNeeded, true);
+  assert.ok(rep.lineup.every((s) => !s.player || s.player.adj > 0));
+  const wr = rep.lineup.find((s) => s.slot === 'WR');
+  assert.equal(wr.player, null);
+  assert.equal(wr.current.id, '5');
+  assert.ok(rep.bench.some((p) => p.id === '5'));
+});

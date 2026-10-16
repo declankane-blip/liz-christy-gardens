@@ -24,6 +24,7 @@ const STATUS_FACTOR = {
 // this many extra points when ranking, never when summing a lineup's projected total.
 const ROSTER_WEIGHT = 1.5;
 const POPULAR_FREE_AGENT = 50; // % rostered at which a free agent is worth surfacing on its own
+const SEASON_ENDING = /season[- ]ending|out for (the )?(season|year)|rest of (the )?season|for the year|torn (acl|achilles)|ruptured|will not return/i;
 const MARGINAL_POINTS = 1.0; // swaps worth less than this are called toss-ups
 const NEWS_WINDOW_MS = 72 * 3600 * 1000;
 
@@ -79,6 +80,7 @@ export function buildPlayers(projectionRows, scoring, { now = Date.now() } = {})
       bodyPart: p.injury_body_part || null,
       recentNews: Boolean(newsAt && now - newsAt <= NEWS_WINDOW_MS),
       rostered: null,
+      cut: !(row.team || p.team) && pos !== 'DEF',
     });
   }
   return players;
@@ -137,7 +139,7 @@ function describeIssue(p) {
  *  - extraNames: Map id -> {name,pos,team} for rostered players with no projection (byes)
  *  - trending: { add: [{player_id,count}], drop: [{player_id,count}] }
  */
-export function buildReport({ league, roster, allRosters, projections, extraNames = new Map(), trending = {}, dropAlertThreshold = 100000 }) {
+export function buildReport({ league, roster, allRosters, projections, extraNames = new Map(), trending = {}, dropAlertThreshold = 100000, missingMeansCut = false }) {
   const { slots, unsupported } = startingSlots(league.roster_positions);
   const reserve = new Set([...(roster.reserve || []), ...(roster.taxi || [])].map(String));
   const myIds = (roster.players || []).map(String);
@@ -149,10 +151,24 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     if (p) return p;
     const e = extraNames.get(id) || {};
     return { id, name: e.name || `Player ${id}`, pos: e.pos || '?', team: e.team || null, opp: null, playing: false,
-      proj: 0, adj: 0, status: null, note: null, bodyPart: null, recentNews: false, rostered: null };
+      proj: 0, adj: 0, status: null, note: null, bodyPart: null, recentNews: false, rostered: null, cut: missingMeansCut && !projections.has(id) && !extraNames.has(id) };
   };
 
   const mine = myIds.map(lookup);
+  // Must drop: cut from their NFL team, or out for the season. They can't help, so say so plainly.
+  const mustDrop = mine
+    .map((p) => {
+      if (p.cut) return { player: p, reason: 'Not on an NFL team (cut or released)' };
+      const text = `${p.bodyPart || ''} ${p.note || ''}`;
+      // Sleeper's injury notes are short ('Surgery', 'Fracture'), so surgery on IR counts as season-ending.
+      const surgeryOnIR = ['IR', 'PUP'].includes(p.status) && /surgery/i.test(text);
+      if ((['Out', 'IR', 'PUP'].includes(p.status) && SEASON_ENDING.test(text)) || surgeryOnIR) {
+        return { player: p, reason: `Likely out for the season${p.note ? `: ${p.note}` : ''}` };
+      }
+      return null;
+    })
+    .filter(Boolean);
+  const mustDropIds = new Set(mustDrop.map((m) => m.player.id));
   const active = mine.filter((p) => !reserve.has(p.id));
   const eligible = active.filter((p) => SLOT_ELIGIBILITY[p.pos]);
 
@@ -192,7 +208,7 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   // news timestamp updates for nearly everyone each week, so it is not a useful filter on its own)
   const news = mine
     .map((p) => ({ player: p, issue: describeIssue(p), trendDrop: trendDrop.get(p.id) || 0, onIR: reserve.has(p.id) }))
-    .filter((n) => n.issue || n.trendDrop > dropAlertThreshold)
+    .filter((n) => !mustDropIds.has(n.player.id) && (n.issue || n.trendDrop > dropAlertThreshold))
     .map((n) => ({ ...n, starting: recommendedIds.has(n.player.id) }))
     .sort((a, b) => Number(b.starting) - Number(a.starting) || b.player.proj - a.player.proj);
 
@@ -230,7 +246,11 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   }
   pickups.sort((a, b) => b.delta - a.delta || (b.player.rostered ?? 0) - (a.player.rostered ?? 0) || b.adds - a.adds || b.player.adj - a.player.adj);
 
+  // Cut or season-ending players are the first drops, ahead of the lowest-projected bench player.
+  mustDrop.forEach((m, i) => { if (pickups[i]) pickups[i].drop = m.player; });
+
   return {
+    mustDrop,
     lineup,
     bench,
     bestTotal: round1(bestTotal),

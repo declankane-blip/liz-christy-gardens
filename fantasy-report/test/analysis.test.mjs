@@ -74,3 +74,38 @@ test('never starts a zero-point player; leaves the slot open and benches him', (
   assert.equal(wr.current.id, '5');
   assert.ok(rep.bench.some((p) => p.id === '5'));
 });
+
+test('cut and season-ending players are listed as must drop and used as the drop suggestion', () => {
+  const mk = (id, pos, pts, over = {}) => ({ ...row(id, pos, pts), ...over });
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'RB', 14), row('4', 'RB', 5), row('5', 'WR', 12), row('8', 'WR', 18), row('9', 'WR', 6)];
+  const projections = buildPlayers(rows, {});
+  projections.get('9').status = 'IR';
+  projections.get('9').note = 'Torn ACL, season-ending';
+  projections.get('9').adj = 0;
+  projections.get('4').cut = true;
+  const roster = { players: ['1', '2', '3', '4', '5', '9'], starters: ['1', '2', '3', '5', '4'] };
+  const rep = buildReport({ league, roster, allRosters: [roster], projections });
+  assert.deepEqual(rep.mustDrop.map((m) => m.player.id).sort(), ['4', '9']);
+  assert.ok(rep.mustDrop.every((m) => m.reason));
+  assert.ok(!rep.news.some((n) => ['4', '9'].includes(n.player.id)));
+  assert.ok(['4', '9'].includes(rep.pickups[0].drop.id));
+});
+
+test('players missing from every week are cut only when neighbouring weeks loaded', () => {
+  const projections = buildPlayers([row('1', 'QB', 20)], {});
+  const roster = { players: ['1', '777'], starters: ['1'] };
+  const l = { roster_positions: ['QB', 'BN'], scoring_settings: {} };
+  assert.equal(buildReport({ league: l, roster, allRosters: [roster], projections }).mustDrop.length, 0);
+  assert.equal(buildReport({ league: l, roster, allRosters: [roster], projections, missingMeansCut: true }).mustDrop.length, 1);
+});
+
+test('surgery on IR counts as out for the season, a short IR stint does not', () => {
+  const rows = [row('1', 'QB', 20), row('5', 'WR', 9, { status: 'IR' }), row('6', 'WR', 8, { status: 'IR' })];
+  const projections = buildPlayers(rows, {});
+  projections.get('5').note = 'Surgery';
+  projections.get('6').note = 'Strain';
+  const roster = { players: ['1', '5', '6'], starters: ['1'] };
+  const l = { roster_positions: ['QB', 'BN', 'BN'], scoring_settings: {} };
+  const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
+  assert.deepEqual(rep.mustDrop.map((m) => m.player.id), ['5']);
+});

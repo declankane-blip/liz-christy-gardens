@@ -30,6 +30,8 @@ const NEWS_WINDOW_MS = 72 * 3600 * 1000;
 
 const round1 = (n) => Math.round(n * 10) / 10;
 // Where there is no roster % (Sleeper), p.trend in [-1, 1] stands in: add/drop momentum over 48h.
+// Roster % where known; otherwise map Sleeper's add/drop trend (-1..1) onto the same 0..100 scale.
+const dropKey = (p) => (p.rostered != null ? p.rostered : 50 + (p.trend ?? 0) * 50);
 const rank = (p) => p.adj + ((p.rostered ?? 0) / 100) * ROSTER_WEIGHT + (p.trend ?? 0) * ROSTER_WEIGHT;
 
 /** Projection discounted for injury designation; zero when the team has no game. */
@@ -255,10 +257,11 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     const delta = round1(lineupTotal(withFa) - bestTotal);
     const starts = withFa.some((s) => s.player?.id === fa.id);
     const keep = new Set(withFa.map((s) => s.player?.id).filter(Boolean));
-    // A player on bye projects for zero but is coming back, so he is never the suggested drop.
+    // Drop the bench player with the lowest roster rate. Players on bye or IR/PUP are coming back, so
+    // they are never the suggestion (cut or season-ending players are handled by mustDrop instead).
     const drop = eligible
-      .filter((p) => !keep.has(p.id) && !p.bye)
-      .sort((a, b) => rank(a) - rank(b) || a.proj - b.proj)[0] || null;
+      .filter((p) => !keep.has(p.id) && !p.bye && !['IR', 'PUP'].includes(p.status))
+      .sort((a, b) => dropKey(a) - dropKey(b) || a.adj - b.adj || a.proj - b.proj)[0] || null;
     const adds = trendAdd.get(fa.id) || 0;
     const popular = (fa.rostered ?? 0) >= POPULAR_FREE_AGENT;
     if (!(starts && delta >= MARGINAL_POINTS) && adds === 0 && !popular) continue;

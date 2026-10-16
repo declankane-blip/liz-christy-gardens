@@ -110,16 +110,16 @@ test('surgery on IR counts as out for the season, a short IR stint does not', ()
   assert.deepEqual(rep.mustDrop.map((m) => m.player.id), ['5']);
 });
 
-test('IR player in a regular roster spot is must-drop; the same player in the IR slot is not', () => {
-  const rows = [row('1', 'QB', 20), row('5', 'WR', 9, { status: 'IR' })];
+test('a player on IR is not must-drop unless cut or out for the season', () => {
+  const rows = [row('1', 'QB', 20), row('5', 'WR', 9, { status: 'IR' }), row('6', 'WR', 8, { status: 'IR' })];
   const projections = buildPlayers(rows, {});
-  projections.get('5').note = 'Strain';
-  const l = { roster_positions: ['QB', 'BN', 'IR'], scoring_settings: {} };
-  const onBench = { players: ['1', '5'], starters: ['1'] };
-  const inSlot = { players: ['1', '5'], starters: ['1'], reserve: ['5'] };
-  const a = buildReport({ league: l, roster: onBench, allRosters: [onBench], projections });
-  assert.deepEqual(a.mustDrop.map((m) => m.player.id), ['5']);
-  assert.match(a.mustDrop[0].reason, /IR slot/);
-  const b = buildReport({ league: l, roster: inSlot, allRosters: [inSlot], projections });
-  assert.equal(b.mustDrop.length, 0);
+  projections.get('5').bodyPart = 'Ankle';
+  projections.get('5').note = 'Sprain';
+  projections.get('6').bodyPart = 'Knee - ACL';
+  projections.get('6').note = 'Surgery';
+  const l = { roster_positions: ['QB', 'BN', 'BN'], scoring_settings: {} };
+  const roster = { players: ['1', '5', '6'], starters: ['1'] };
+  const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
+  assert.deepEqual(rep.mustDrop.map((m) => m.player.id), ['6']);
+  assert.ok(rep.news.some((n) => n.player.id === '5'));
 });

@@ -165,6 +165,11 @@ export function buildReport({ league, roster, allRosters, projections, extraName
       if ((['Out', 'IR', 'PUP'].includes(p.status) && SEASON_ENDING.test(text)) || surgeryOnIR) {
         return { player: p, reason: `Likely out for the season${p.note ? `: ${p.note}` : ''}` };
       }
+      // On IR/PUP but sitting in a regular roster spot: it should be in the IR slot, or cut.
+      if (['IR', 'PUP'].includes(p.status) && !reserve.has(p.id)) {
+        const hasIRSlot = (league.roster_positions || []).includes('IR');
+        return { player: p, reason: `On injured reserve but taking a roster spot: ${hasIRSlot ? 'move to your IR slot or drop' : 'drop'}` };
+      }
       return null;
     })
     .filter(Boolean);

@@ -97,3 +97,25 @@ export function adaptEspn({ leagueData, freeAgentData, teamId, week }) {
   delete league.slotOrder;
   return { league, roster: mine, allRosters: rosters, projections, trending: { add: trendAdd, drop: [] } };
 }
+
+const norm = (name) => String(name || '').toLowerCase().replace(/\b(jr|sr|ii|iii|iv)\b/g, '').replace(/[^a-z]/g, '');
+
+/**
+ * ESPN's API has no injury text, so borrow it from Sleeper's projection rows (matched by name and
+ * position). Only fills players ESPN already marks injured, and never overwrites existing notes.
+ */
+export function enrichInjuries(projections, sleeperRows) {
+  const byName = new Map();
+  for (const row of sleeperRows || []) {
+    const p = row.player || {};
+    if (!p.injury_body_part && !p.injury_notes) continue;
+    const key = `${norm(`${p.first_name} ${p.last_name}`)}|${p.position}`;
+    byName.set(key, { note: p.injury_notes || null, bodyPart: p.injury_body_part || null });
+  }
+  for (const player of projections.values()) {
+    if (!player.status || player.note || player.bodyPart) continue;
+    const hit = byName.get(`${norm(player.name)}|${player.pos}`);
+    if (hit) Object.assign(player, hit);
+  }
+  return projections;
+}

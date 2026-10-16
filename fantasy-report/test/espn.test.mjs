@@ -57,3 +57,11 @@ test('roster projections are backfilled when the roster view has none, and a mis
   assert.equal(a.projections.get('1').adj, 18.5);
   assert.throws(() => adaptEspn({ leagueData: data, freeAgentData: { players: [] }, teamId: 99, week: W }), /find that team/);
 });
+
+test('roster % for your own ESPN players is backfilled from the by-id lookup', () => {
+  const entry = { playerId: 1, lineupSlotId: 0, playerPoolEntry: { player: { id: 1, fullName: 'P1', defaultPositionId: 1, proTeamId: 17, injuryStatus: 'ACTIVE', stats: [{ scoringPeriodId: W, statSourceId: 1, statSplitTypeId: 1, appliedTotal: 10 }] } } };
+  const data = { ...leagueData, teams: [{ id: 1, name: 'Mine', roster: { entries: [entry] } }] };
+  const rosterPlayerData = { players: [{ player: { ...entry.playerPoolEntry.player, ownership: { percentOwned: 91.2 } } }] };
+  const a = adaptEspn({ leagueData: data, freeAgentData: { players: [] }, rosterPlayerData, teamId: 1, week: W });
+  assert.equal(a.projections.get('1').rostered, 91.2);
+});

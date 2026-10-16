@@ -53,16 +53,18 @@ async function run(summary) {
 
     // Players on a bye have no projection this week; borrow names from a neighbouring week.
     const extraNames = new Map();
+    let neighboursLoaded = false;
     const missing = (roster.players || []).filter((id) => !projections.has(String(id)));
     if (missing.length) {
       const neighbours = await Promise.all(
         [week + 1, week - 1].filter((w) => w >= 1).map((w) => sleeper.getProjections(season, w).catch(() => [])),
       );
+      neighboursLoaded = neighbours.every((rows) => rows.length > 0);
       for (const p of neighbours.flatMap((rows) => [...buildPlayers(rows, league.scoring_settings).values()])) {
         extraNames.set(p.id, p);
       }
     }
-    render(summary.name, week, buildReport({ league, roster, allRosters, projections, extraNames, trending }));
+    render(summary.name, week, buildReport({ league, roster, allRosters, projections, extraNames, trending, missingMeansCut: neighboursLoaded }));
     setStatus('');
   } catch (err) {
     setStatus(err.message, true);
@@ -107,12 +109,17 @@ function render(leagueName, week, r, trendUnit = 'adds') {
         <span class="pts">${pts(u.player.adj)}</span></div>`).join('')
     : '<div class="row muted">Nothing on waivers would improve your lineup this week.</div>';
 
+  const mustDrop = r.mustDrop.length
+    ? `<h2>Must drop</h2><div class="card">${r.mustDrop.map((m) => `<div class="row">${playerLine(m.player)}<span class="who muted">${esc(m.reason)}</span><span class="tag sit">DROP</span></div>`).join('')}</div>`
+    : '';
+
   const ir = r.ir.length ? `<p class="muted">IR / taxi: ${r.ir.map((p) => esc(p.name)).join(', ')}</p>` : '';
   const unsupported = r.unsupported.length ? `<p class="muted">Not analysed (IDP slots): ${esc(r.unsupported.join(', '))}</p>` : '';
 
   $('report').innerHTML = `
     <h2>${esc(leagueName)} · Week ${week}</h2>
     <div class="summary">${summary}</div>
+    ${mustDrop}
     <h2>Start / sit</h2><div class="card">${lineup}</div>
     <h2>Bench</h2><div class="card">${benchRows || '<div class="row muted">Empty bench</div>'}</div>${ir}${unsupported}
     <h2>Player news</h2><div class="card">${news}</div>

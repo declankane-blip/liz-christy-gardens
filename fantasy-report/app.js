@@ -78,9 +78,9 @@ async function run(summary) {
 const matchup = (p) => (p.playing ? (p.opp ? `${p.team} vs ${p.opp}` : `${p.team || ''}`) : p.bye ? `${p.team} · BYE WEEK` : `${p.team || 'No team'} · no game`);
 const pts = (n) => (typeof n === 'number' ? n.toFixed(1) : '-');
 
-function playerLine(p, extra = '') {
+function playerLine(p, extra = '', tone = '') {
   const flag = (p.bye ? ' <span class="tag warn">BYE</span>' : '') + (p.status ? ` <span class="tag warn">${esc(p.status)}</span>` : '');
-  return `<span class="who">${esc(p.name)}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${p.trendNote ? ` · ${p.trendNote}` : ''}${extra}</small></span>`;
+  return `<span class="who ${tone ? `tone-${tone}` : ''}"><span class="nm">${esc(p.name)}</span>${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${p.trendNote ? ` · ${p.trendNote}` : ''}${extra}</small></span>`;
 }
 
 function render(leagueName, week, r, trendUnit = 'adds') {
@@ -108,13 +108,13 @@ function render(leagueName, week, r, trendUnit = 'adds') {
     : '<div class="row muted">No injury or bye issues on your roster.</div>';
 
   const pickups = r.pickups.length
-    ? r.pickups.map((u) => `<div class="row">${playerLine(u.player, u.adds ? (trendUnit === 'pct' ? ` · +${u.adds}% rostered this week` : ` · ${u.adds.toLocaleString()} adds in 48h`) : '')}
-        <span class="who muted">${u.starts && u.delta >= 1 ? `Would start: +${pts(u.delta)} pts` : 'Trending, not a starter for you'}${u.drop ? `<small>Drop: ${esc(u.drop.name)} (${pts(u.drop.adj)})</small>` : ''}</span>
+    ? r.pickups.map((u) => `<div class="row"><span class="tag add">ADD</span>${playerLine(u.player, u.adds ? (trendUnit === 'pct' ? ` · +${u.adds}% rostered this week` : ` · ${u.adds.toLocaleString()} adds in 48h`) : '', 'add')}
+        <span class="who muted">${u.starts && u.delta >= 1 ? `Would start: +${pts(u.delta)} pts` : 'Trending, not a starter for you'}${u.drop ? `<small class="drop-text">Drop: ${esc(u.drop.name)} (${pts(u.drop.adj)})</small>` : ''}</span>
         <span class="pts">${pts(u.player.adj)}</span></div>`).join('')
     : '<div class="row muted">Nothing on waivers would improve your lineup this week.</div>';
 
   const mustDrop = r.mustDrop.length
-    ? `<h2>Must drop</h2><div class="card">${r.mustDrop.map((m) => `<div class="row">${playerLine(m.player)}<span class="who muted">${esc(m.reason)}</span><span class="tag sit">DROP</span></div>`).join('')}</div>`
+    ? `<h2>Must drop</h2><div class="card">${r.mustDrop.map((m) => `<div class="row">${playerLine(m.player, '', 'drop')}<span class="who muted">${esc(m.reason)}</span><span class="tag drop">DROP</span></div>`).join('')}</div>`
     : '';
 
   const ir = r.ir.length ? `<p class="muted">IR / taxi: ${r.ir.map((p) => esc(p.name)).join(', ')}</p>` : '';

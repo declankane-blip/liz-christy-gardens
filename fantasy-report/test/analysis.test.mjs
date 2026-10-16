@@ -179,3 +179,16 @@ test('without roster %, Sleeper add/drop trends break near ties but not clear ga
     trending: { add: [{ player_id: '2', count: 90000 }], drop: [{ player_id: '1', count: 90000 }] } });
   assert.equal(clear.lineup[0].player.id, '1'); // a 4-point gap is not overridden
 });
+
+test('drop suggestion is the lowest roster rate on the bench, never an IR player', () => {
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'RB', 14), row('4', 'RB', 13), row('5', 'WR', 12),
+    row('6', 'WR', 6), row('7', 'WR', 7), row('8', 'WR', 4, { status: 'IR' }), row('9', 'WR', 18)];
+  const projections = buildPlayers(rows, {});
+  projections.get('6').rostered = 80; // low points, but widely rostered
+  projections.get('7').rostered = 12; // better points, barely rostered -> the drop
+  projections.get('8').rostered = 1;  // IR, lowest rate of all, but must not be suggested
+  const roster = { players: ['1', '2', '3', '4', '5', '6', '7', '8'], starters: ['1', '2', '3', '5', '4'] };
+  const rep = buildReport({ league, roster, allRosters: [roster], projections });
+  const pickup = rep.pickups.find((p) => p.player.id === '9');
+  assert.equal(pickup.drop.id, '7');
+});

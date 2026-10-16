@@ -192,3 +192,29 @@ test('drop suggestion is the lowest roster rate on the bench, never an IR player
   const pickup = rep.pickups.find((p) => p.player.id === '9');
   assert.equal(pickup.drop.id, '7');
 });
+
+test('players already starting are never swapped between slots', () => {
+  // Optimal assignment would put the 12-pt newcomer in WR1 and the current WR1 in WR2.
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'RB', 14), row('4', 'WR', 10), row('5', 'WR', 9), row('6', 'WR', 12)];
+  const projections = buildPlayers(rows, {});
+  const roster = { players: ['1', '2', '3', '4', '5', '6'], starters: ['1', '2', '3', '4', '5'] };
+  const l = { roster_positions: ['QB', 'RB', 'RB', 'WR', 'WR', 'BN'], scoring_settings: {} };
+  const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
+  const wrs = rep.lineup.filter((s) => s.slot === 'WR');
+  assert.deepEqual(wrs.map((s) => s.player.id), ['4', '6']);
+  assert.equal(wrs[0].changed, false);
+  assert.equal(wrs[1].changed, true);
+  assert.equal(wrs[1].current.id, '5');
+  assert.equal(rep.lineup.filter((s) => s.changed).length, 1);
+});
+
+test('a flex starter who also fits a WR slot is not shuffled', () => {
+  const rows = [row('1', 'QB', 20), row('2', 'RB', 15), row('3', 'WR', 14), row('4', 'WR', 12), row('5', 'RB', 11), row('6', 'WR', 16)];
+  const projections = buildPlayers(rows, {});
+  // WR slot holds 3, FLEX holds 4; benched 5 is worse than 6. 6 should replace 4 in FLEX only.
+  const roster = { players: ['1', '2', '3', '4', '5', '6'], starters: ['1', '2', '3', '4'] };
+  const l = { roster_positions: ['QB', 'RB', 'WR', 'FLEX', 'BN', 'BN'], scoring_settings: {} };
+  const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
+  assert.equal(rep.lineup.filter((s) => s.changed).length, 1);
+  assert.equal(rep.lineup.find((s) => s.slot === 'WR').player.id, '3');
+});

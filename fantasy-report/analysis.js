@@ -122,6 +122,28 @@ export function optimizeLineup(slots, candidates) {
   return out;
 }
 
+/**
+ * Same set of starters as `best`, but anyone already starting stays in his current slot. Only newly
+ * started players move, into the slots the benched players vacate, so two current starters are never
+ * shown swapping places. Falls back to `best` if a newcomer has nowhere eligible to go.
+ */
+function keepCurrentSlots(slots, current, best) {
+  const bestIds = new Set(best.map((s) => s.player?.id).filter(Boolean));
+  const out = slots.map((slot, index) => ({ slot, index, player: null }));
+  const placed = new Set();
+  for (const c of current) {
+    if (c.player && bestIds.has(c.player.id) && SLOT_ELIGIBILITY[c.slot].includes(c.player.pos)) {
+      out[c.index].player = c.player;
+      placed.add(c.player.id);
+    }
+  }
+  const open = out.filter((s) => !s.player);
+  const newcomers = best.map((s) => s.player).filter((p) => p && !placed.has(p.id));
+  const filled = optimizeLineup(open.map((s) => s.slot), newcomers);
+  filled.forEach((f, i) => { open[i].player = f.player; if (f.player) placed.add(f.player.id); });
+  return newcomers.every((p) => placed.has(p.id)) ? out : best;
+}
+
 const lineupTotal = (lineup) => lineup.reduce((sum, s) => sum + (s.player?.adj || 0), 0);
 
 function describeIssue(p) {
@@ -212,7 +234,7 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   const bestIds = new Set(best.map((s) => s.player?.id).filter(Boolean));
   const startsZero = currentLineup.some((s) => s.player && s.player.adj <= 0 && !bestIds.has(s.player.id));
   const changesNeeded = !hasCurrent || gain >= MARGINAL_POINTS || startsZero;
-  const recommended = changesNeeded ? best : currentLineup;
+  const recommended = !changesNeeded ? currentLineup : hasCurrent ? keepCurrentSlots(slots, currentLineup, best) : best;
   const recommendedIds = new Set(recommended.map((s) => s.player?.id).filter(Boolean));
 
   const lineup = recommended.map((s) => {

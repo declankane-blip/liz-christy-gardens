@@ -27,6 +27,14 @@ export const seasonYear = (now = new Date()) => (now.getMonth() < 2 ? now.getFul
 export const getLeague = (year, id, cookies) =>
   call(year, id, [['view', 'mSettings'], ['view', 'mTeam'], ['view', 'mRoster']], { cookies });
 
+const statsFilter = (year, week) => ({ value: 2, additionalValue: [`00${year}`, `10${year}`, `11${year}${week}`] });
+
+/** Projections for specific players (your roster), in the same format as the free-agent list. */
+export function getPlayersById(year, id, week, playerIds, cookies) {
+  const filter = { players: { filterIds: { value: playerIds.map(Number) }, filterStatsForTopScoringPeriodIds: statsFilter(year, week) } };
+  return call(year, id, [['view', 'kona_player_info'], ['scoringPeriodId', String(week)]], { filter, cookies });
+}
+
 export function getFreeAgents(year, id, week, cookies) {
   const filter = {
     players: {
@@ -35,7 +43,7 @@ export function getFreeAgents(year, id, week, cookies) {
       filterRanksForScoringPeriodIds: { value: [week] },
       limit: 200,
       sortPercOwned: { sortPriority: 1, sortAsc: false },
-      filterStatsForTopScoringPeriodIds: { value: 2, additionalValue: [`00${year}`, `10${year}`, `11${year}${week}`] },
+      filterStatsForTopScoringPeriodIds: statsFilter(year, week),
     },
   };
   return call(year, id, [['view', 'kona_player_info'], ['scoringPeriodId', String(week)]], { filter, cookies });

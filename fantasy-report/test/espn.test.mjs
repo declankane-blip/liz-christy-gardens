@@ -48,3 +48,12 @@ test('ESPN players on IR pick up injury notes from Sleeper so season-ending inju
   const rep = buildReport({ ...a, dropAlertThreshold: Infinity });
   assert.deepEqual(rep.mustDrop.map((m) => m.player.name), ["De'Von Achane"]);
 });
+
+test('roster projections are backfilled when the roster view has none, and a missing team is a clear error', () => {
+  const bare = (id, pos) => ({ playerId: id, lineupSlotId: 0, playerPoolEntry: { player: { id, fullName: `P${id}`, defaultPositionId: pos, proTeamId: 17, injuryStatus: 'ACTIVE', stats: [] } } });
+  const data = { ...leagueData, teams: [{ id: 1, name: 'Mine', roster: { entries: [bare(1, 1)] } }] };
+  const rosterPlayerData = { players: [pool(1, 1, 18.5).playerPoolEntry] };
+  const a = adaptEspn({ leagueData: data, freeAgentData: { players: [] }, rosterPlayerData, teamId: 1, week: W });
+  assert.equal(a.projections.get('1').adj, 18.5);
+  assert.throws(() => adaptEspn({ leagueData: data, freeAgentData: { players: [] }, teamId: 99, week: W }), /find that team/);
+});

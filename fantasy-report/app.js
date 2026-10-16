@@ -6,6 +6,10 @@ import { adaptEspn, enrichInjuries, teamLabel } from './espn-adapter.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const setStatus = (msg, error = false) => { $('status').textContent = msg; $('status').className = error ? 'error' : ''; };
+// Any failure shows its real message on the page (and in the console) so it can be reported.
+const fail = (err) => { console.error(err); setStatus(`Something went wrong: ${err?.message || err}`, true); };
+window.addEventListener('error', (e) => fail(e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => fail(e.reason));
 
 let state = null;
 let user = null;
@@ -31,7 +35,7 @@ $('lookup').addEventListener('submit', async (e) => {
     $('leagues').hidden = false;
     setStatus('');
   } catch (err) {
-    setStatus(err.message, true);
+    fail(err);
   }
 });
 
@@ -67,7 +71,7 @@ async function run(summary) {
     render(summary.name, week, buildReport({ league, roster, allRosters, projections, extraNames, trending, missingMeansCut: neighboursLoaded }));
     setStatus('');
   } catch (err) {
-    setStatus(err.message, true);
+    fail(err);
   }
 }
 
@@ -163,7 +167,7 @@ $('espn-form').addEventListener('submit', async (e) => {
     $('leagues').hidden = false;
     setStatus('');
   } catch (err) {
-    setStatus(err.message, true);
+    fail(err);
   }
 });
 
@@ -172,13 +176,18 @@ async function runEspn({ year, id, cookies, leagueData, teamId, name }) {
   try {
     setStatus(`Building report for ${name}...`);
     const week = leagueData.scoringPeriodId;
-    const freeAgentData = await espn.getFreeAgents(year, id, week, cookies);
-    const a = adaptEspn({ leagueData, freeAgentData, teamId, week });
+    const mineIds = (leagueData.teams.find((t) => t.id === Number(teamId))?.roster?.entries || []).map((e) => e.playerId);
+    // Waivers and roster projections are best effort: a failure here should not kill the whole report.
+    const [freeAgentData, rosterPlayerData] = await Promise.all([
+      espn.getFreeAgents(year, id, week, cookies).catch((e) => { console.error(e); return { players: [] }; }),
+      mineIds.length ? espn.getPlayersById(year, id, week, mineIds, cookies).catch((e) => { console.error(e); return []; }) : [],
+    ]);
+    const a = adaptEspn({ leagueData, freeAgentData, rosterPlayerData, teamId, week });
     // ESPN has no injury notes; Sleeper's public data does. Best effort, never blocks the report.
     enrichInjuries(a.projections, await sleeper.getProjections(year, week).catch(() => []));
     render(name, week, buildReport({ ...a, dropAlertThreshold: Infinity }), 'pct');
     setStatus('');
   } catch (err) {
-    setStatus(err.message, true);
+    fail(err);
   }
 }

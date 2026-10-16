@@ -140,3 +140,22 @@ test('marks players whose team has no game as on bye, but not injured players on
   assert.equal(byeNews.issue, 'On bye this week');
   assert.match(rep.news.find((n) => n.player.id === '8').issue, /^IR/);
 });
+
+test('a player on bye is never suggested as the drop', () => {
+  const rows = [];
+  for (let i = 0; i < 10; i++) rows.push({ ...row(`t${i}`, 'WR', 10), team: `T${i}` });
+  rows.push({ ...row('1', 'QB', 20), team: 'T0' });
+  rows.push({ ...row('2', 'RB', 15), team: 'T2' });
+  rows.push({ ...row('3', 'RB', 14), team: 'T3' });
+  rows.push({ ...row('4', 'RB', 3), team: 'T4' });
+  rows.push({ ...row('5', 'WR', 12), team: 'T5' });
+  rows.push({ ...row('6', 'WR', 0, { noGame: true }), team: 'BYE' });
+  rows.push({ ...row('8', 'WR', 18), team: 'T8' });
+  const projections = buildPlayers(rows, {});
+  const roster = { players: ['1', '2', '3', '4', '5', '6'], starters: ['1', '2', '3', '5', '4'] };
+  const rep = buildReport({ league, roster, allRosters: [roster], projections });
+  const top = rep.pickups.find((p) => p.player.id === '8');
+  assert.ok(top.drop, 'has a drop suggestion');
+  assert.notEqual(top.drop.id, '6');
+  assert.ok(rep.bench.some((p) => p.id === '6' && p.bye));
+});

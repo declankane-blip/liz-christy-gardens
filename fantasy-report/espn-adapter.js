@@ -62,14 +62,23 @@ export function teamLabel(team) {
  * leagueData: response of league endpoint with mSettings+mTeam+mRoster views
  * freeAgentData: response of kona_player_info view ({ players: [...] }) for free agents/waivers
  */
-export function adaptEspn({ leagueData, freeAgentData, teamId, week }) {
+export function adaptEspn({ leagueData, freeAgentData, rosterPlayerData, teamId, week }) {
   const league = leagueFromEspn(leagueData);
   const projections = new Map();
+  // The roster view doesn't always carry this week's projection; backfill from a by-id lookup.
+  const backfill = new Map();
+  for (const entry of rosterPlayerData?.players || rosterPlayerData || []) {
+    const p = toPlayer(entry, week);
+    if (p) backfill.set(p.id, p);
+  }
   const toRoster = (team) => {
     const entries = team.roster?.entries || [];
     const ids = [];
     for (const e of entries) {
-      const player = toPlayer(e.playerPoolEntry, week);
+      if (!e.playerPoolEntry) { ids.push(String(e.playerId)); continue; }
+      let player = toPlayer(e.playerPoolEntry, week);
+      const extra = player && backfill.get(player.id);
+      if (player && !player.playing && extra?.playing) player = { ...player, proj: extra.proj, adj: extra.adj, playing: true };
       if (player) projections.set(player.id, player);
       ids.push(String(e.playerId));
     }
@@ -84,6 +93,7 @@ export function adaptEspn({ leagueData, freeAgentData, teamId, week }) {
   };
   const rosters = (leagueData.teams || []).map(toRoster);
   const mine = rosters.find((r) => r.id === Number(teamId));
+  if (!mine) throw new Error('Could not find that team in the ESPN league data.');
 
   const trendAdd = [];
   for (const fa of freeAgentData?.players || []) {

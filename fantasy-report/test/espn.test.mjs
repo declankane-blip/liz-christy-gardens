@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { adaptEspn } from '../espn-adapter.js';
+import { adaptEspn, enrichInjuries } from '../espn-adapter.js';
 import { buildReport } from '../analysis.js';
 
 const W = 6;
@@ -37,4 +37,14 @@ test('adapts ESPN data and reports start/sit plus waiver pickup', () => {
   assert.equal(rep.pickups[0].adds, 4.2);
   assert.equal(rep.pickups[0].player.rostered, 38.5);
   assert.ok(rep.news.some((n) => n.player.id === '5') && rep.news.some((n) => n.player.id === '11'));
+});
+
+test('ESPN players on IR pick up injury notes from Sleeper so season-ending injuries are caught', () => {
+  const data = { ...leagueData, teams: [{ id: 1, name: 'Mine', roster: { entries: [pool(1, 1, 20, { slot: 0 }), pool(2, 2, 0, { slot: 20, inj: 'INJURY_RESERVE' })] } }] };
+  data.teams[0].roster.entries[1].playerPoolEntry.player.fullName = "De'Von Achane";
+  const a = adaptEspn({ leagueData: data, freeAgentData: { players: [] }, teamId: 1, week: W });
+  assert.equal(buildReport({ ...a, dropAlertThreshold: Infinity }).mustDrop.length, 0);
+  enrichInjuries(a.projections, [{ player: { first_name: "De'Von", last_name: 'Achane', position: 'RB', injury_body_part: 'Knee - ACL', injury_notes: 'Surgery' } }]);
+  const rep = buildReport({ ...a, dropAlertThreshold: Infinity });
+  assert.deepEqual(rep.mustDrop.map((m) => m.player.name), ["De'Von Achane"]);
 });

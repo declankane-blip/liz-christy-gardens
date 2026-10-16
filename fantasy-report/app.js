@@ -1,7 +1,7 @@
 import * as sleeper from './sleeper.js';
 import { buildPlayers, buildReport } from './analysis.js';
 import * as espn from './espn.js';
-import { adaptEspn, teamLabel } from './espn-adapter.js';
+import { adaptEspn, enrichInjuries, teamLabel } from './espn-adapter.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -174,6 +174,8 @@ async function runEspn({ year, id, cookies, leagueData, teamId, name }) {
     const week = leagueData.scoringPeriodId;
     const freeAgentData = await espn.getFreeAgents(year, id, week, cookies);
     const a = adaptEspn({ leagueData, freeAgentData, teamId, week });
+    // ESPN has no injury notes; Sleeper's public data does. Best effort, never blocks the report.
+    enrichInjuries(a.projections, await sleeper.getProjections(year, week).catch(() => []));
     render(name, week, buildReport({ ...a, dropAlertThreshold: Infinity }), 'pct');
     setStatus('');
   } catch (err) {

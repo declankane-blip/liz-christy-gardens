@@ -80,7 +80,7 @@ const pts = (n) => (typeof n === 'number' ? n.toFixed(1) : '-');
 
 function playerLine(p, extra = '') {
   const flag = (p.bye ? ' <span class="tag warn">BYE</span>' : '') + (p.status ? ` <span class="tag warn">${esc(p.status)}</span>` : '');
-  return `<span class="who">${esc(p.name)}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${extra}</small></span>`;
+  return `<span class="who">${esc(p.name)}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${p.trendNote ? ` · ${p.trendNote}` : ''}${extra}</small></span>`;
 }
 
 function render(leagueName, week, r, trendUnit = 'adds') {
@@ -128,7 +128,7 @@ function render(leagueName, week, r, trendUnit = 'adds') {
     <h2>Bench</h2><div class="card">${benchRows || '<div class="row muted">Empty bench</div>'}</div>${ir}${unsupported}
     <h2>Player news</h2><div class="card">${news}</div>
     <h2>Waiver pickups</h2><div class="card">${pickups}</div>
-    <p class="muted">Projected points use your league's scoring and are reduced for injury designations. Where available, % rostered breaks close calls (up to 1.5 points of credit for a fully rostered player) and surfaces popular free agents.</p>`;
+    <p class="muted">Projected points use your league's scoring and are reduced for injury designations. Roster % (ESPN) or add/drop trends (Sleeper) break close calls, worth up to 1.5 points, and surface popular free agents.</p>`;
   $('report').hidden = false;
   $('report').scrollIntoView({ behavior: 'smooth' });
 }

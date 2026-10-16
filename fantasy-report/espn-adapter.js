@@ -79,6 +79,7 @@ export function adaptEspn({ leagueData, freeAgentData, rosterPlayerData, teamId,
       let player = toPlayer(e.playerPoolEntry, week);
       const extra = player && backfill.get(player.id);
       if (player && !player.playing && extra?.playing) player = { ...player, proj: extra.proj, adj: extra.adj, playing: true };
+      if (player && player.rostered == null && extra?.rostered != null) player = { ...player, rostered: extra.rostered };
       if (player) projections.set(player.id, player);
       ids.push(String(e.playerId));
     }

@@ -159,3 +159,23 @@ test('a player on bye is never suggested as the drop', () => {
   assert.notEqual(top.drop.id, '6');
   assert.ok(rep.bench.some((p) => p.id === '6' && p.bye));
 });
+
+test('without roster %, Sleeper add/drop trends break near ties but not clear gaps', () => {
+  const rows = [row('1', 'WR', 10.0), row('2', 'WR', 9.7)];
+  const slots = ['WR'];
+  const mk = (extra) => {
+    const projections = buildPlayers(rows, {});
+    const roster = { players: ['1', '2'], starters: [] }; // no lineup set yet, so the best one is built fresh
+    return buildReport({ league: { roster_positions: ['WR', 'BN'], scoring_settings: {} }, roster, allRosters: [roster], projections, ...extra });
+  };
+  const flat = mk({});
+  assert.equal(flat.lineup[0].player.id, '1');
+  const trending = mk({ trending: { add: [{ player_id: '2', count: 90000 }], drop: [{ player_id: '1', count: 90000 }] } });
+  assert.equal(trending.lineup[0].player.id, '2'); // within a point, momentum wins
+  assert.equal(trending.lineup[0].player.trendNote, 'trending up');
+  const gap = buildPlayers([row('1', 'WR', 14), row('2', 'WR', 9.7)], {});
+  const roster = { players: ['1', '2'], starters: ['2'] };
+  const clear = buildReport({ league: { roster_positions: ['WR', 'BN'], scoring_settings: {} }, roster, allRosters: [roster], projections: gap,
+    trending: { add: [{ player_id: '2', count: 90000 }], drop: [{ player_id: '1', count: 90000 }] } });
+  assert.equal(clear.lineup[0].player.id, '1'); // a 4-point gap is not overridden
+});

@@ -29,7 +29,8 @@ const MARGINAL_POINTS = 1.0; // swaps worth less than this are called toss-ups
 const NEWS_WINDOW_MS = 72 * 3600 * 1000;
 
 const round1 = (n) => Math.round(n * 10) / 10;
-const rank = (p) => p.adj + ((p.rostered ?? 0) / 100) * ROSTER_WEIGHT;
+// Where there is no roster % (Sleeper), p.trend in [-1, 1] stands in: add/drop momentum over 48h.
+const rank = (p) => p.adj + ((p.rostered ?? 0) / 100) * ROSTER_WEIGHT + (p.trend ?? 0) * ROSTER_WEIGHT;
 
 /** Projection discounted for injury designation; zero when the team has no game. */
 export function adjustedPoints(proj, status, playing) {
@@ -146,6 +147,18 @@ export function buildReport({ league, roster, allRosters, projections, extraName
   const myIds = (roster.players || []).map(String);
   const trendAdd = new Map((trending.add || []).map((t) => [String(t.player_id), t.count]));
   const trendDrop = new Map((trending.drop || []).map((t) => [String(t.player_id), t.count]));
+
+  // Normalise trending counts against the busiest player in each list; sqrt keeps one huge outlier
+  // from flattening everyone else. Adds push a player up, drops push him down.
+  const maxAdd = Math.max(1, ...trendAdd.values());
+  const maxDrop = Math.max(1, ...trendDrop.values());
+  for (const p of projections.values()) {
+    if (p.rostered != null) continue;
+    const up = Math.sqrt((trendAdd.get(p.id) || 0) / maxAdd);
+    const down = Math.sqrt((trendDrop.get(p.id) || 0) / maxDrop);
+    p.trend = up - down;
+    p.trendNote = up > down ? 'trending up' : down > up ? 'trending down' : null;
+  }
 
   const lookup = (id) => {
     const p = projections.get(id);

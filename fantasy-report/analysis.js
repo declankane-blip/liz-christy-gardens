@@ -122,11 +122,12 @@ export function optimizeLineup(slots, candidates) {
 const lineupTotal = (lineup) => lineup.reduce((sum, s) => sum + (s.player?.adj || 0), 0);
 
 function describeIssue(p) {
-  if (!p.playing) return 'No game this week (bye)';
+  if (p.bye) return 'On bye this week';
   if (p.status && p.status !== 'Active') {
     const detail = [p.bodyPart, p.note].filter(Boolean).join(' - ');
     return `${p.status}${detail ? `: ${detail}` : ''}`;
   }
+  if (!p.playing) return 'No game this week';
   return null;
 }
 
@@ -154,7 +155,12 @@ export function buildReport({ league, roster, allRosters, projections, extraName
       proj: 0, adj: 0, status: null, note: null, bodyPart: null, recentNews: false, rostered: null, cut: missingMeansCut && !projections.has(id) && !extraNames.has(id) };
   };
 
-  const mine = myIds.map(lookup);
+  // A team is on bye when none of its players has a game this week. Needs a full slate to be trustworthy.
+  const teamsPlaying = new Set([...projections.values()].filter((p) => p.playing && p.team).map((p) => p.team));
+  const slateKnown = teamsPlaying.size >= 10;
+  const markBye = (p) => { p.bye = Boolean(slateKnown && p.team && !p.playing && !teamsPlaying.has(p.team) && !p.cut); return p; };
+  for (const p of projections.values()) markBye(p);
+  const mine = myIds.map(lookup).map(markBye);
   // Must drop: cut from their NFL team, or out for the season. They can't help, so say so plainly.
   const mustDrop = mine
     .map((p) => {

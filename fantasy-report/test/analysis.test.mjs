@@ -104,8 +104,8 @@ test('surgery on IR counts as out for the season, a short IR stint does not', ()
   const projections = buildPlayers(rows, {});
   projections.get('5').note = 'Surgery';
   projections.get('6').note = 'Strain';
-  const roster = { players: ['1', '5', '6'], starters: ['1'] };
-  const l = { roster_positions: ['QB', 'BN', 'BN'], scoring_settings: {} };
+  const roster = { players: ['1', '5', '6'], starters: ['1'], reserve: ['6'] };
+  const l = { roster_positions: ['QB', 'BN', 'IR'], scoring_settings: {} };
   const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
   assert.deepEqual(rep.mustDrop.map((m) => m.player.id), ['5']);
 });

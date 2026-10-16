@@ -242,8 +242,9 @@ export function buildReport({ league, roster, allRosters, projections, extraName
     const delta = round1(lineupTotal(withFa) - bestTotal);
     const starts = withFa.some((s) => s.player?.id === fa.id);
     const keep = new Set(withFa.map((s) => s.player?.id).filter(Boolean));
+    // A player on bye projects for zero but is coming back, so he is never the suggested drop.
     const drop = eligible
-      .filter((p) => !keep.has(p.id))
+      .filter((p) => !keep.has(p.id) && !p.bye)
       .sort((a, b) => rank(a) - rank(b) || a.proj - b.proj)[0] || null;
     const adds = trendAdd.get(fa.id) || 0;
     const popular = (fa.rostered ?? 0) >= POPULAR_FREE_AGENT;

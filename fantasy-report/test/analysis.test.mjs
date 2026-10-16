@@ -123,3 +123,20 @@ test('a player on IR is not must-drop unless cut or out for the season', () => {
   assert.deepEqual(rep.mustDrop.map((m) => m.player.id), ['6']);
   assert.ok(rep.news.some((n) => n.player.id === '5'));
 });
+
+test('marks players whose team has no game as on bye, but not injured players on teams that play', () => {
+  const rows = [];
+  for (let i = 0; i < 10; i++) rows.push({ ...row(`t${i}`, 'WR', 10), team: `T${i}` });
+  rows.push({ ...row('9', 'QB', 20), team: 'T0' });
+  rows.push({ ...row('7', 'RB', 0, { noGame: true }), team: 'BYE' });
+  rows.push({ ...row('8', 'RB', 0, { noGame: true, status: 'IR' }), team: 'T1' });
+  const projections = buildPlayers(rows, {});
+  const roster = { players: ['9', '7', '8'], starters: ['9'] };
+  const l = { roster_positions: ['QB', 'BN', 'BN'], scoring_settings: {} };
+  const rep = buildReport({ league: l, roster, allRosters: [roster], projections });
+  assert.equal(projections.get('7').bye, true);
+  assert.equal(projections.get('8').bye, false);
+  const byeNews = rep.news.find((n) => n.player.id === '7');
+  assert.equal(byeNews.issue, 'On bye this week');
+  assert.match(rep.news.find((n) => n.player.id === '8').issue, /^IR/);
+});

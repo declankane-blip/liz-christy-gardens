@@ -71,11 +71,11 @@ async function run(summary) {
   }
 }
 
-const matchup = (p) => (p.playing ? (p.opp ? `${p.team} vs ${p.opp}` : `${p.team || ''}`) : `${p.team || ''} (bye)`);
+const matchup = (p) => (p.playing ? (p.opp ? `${p.team} vs ${p.opp}` : `${p.team || ''}`) : p.bye ? `${p.team} · BYE WEEK` : `${p.team || 'No team'} · no game`);
 const pts = (n) => (typeof n === 'number' ? n.toFixed(1) : '-');
 
 function playerLine(p, extra = '') {
-  const flag = p.status ? ` <span class="tag warn">${esc(p.status)}</span>` : '';
+  const flag = (p.bye ? ' <span class="tag warn">BYE</span>' : '') + (p.status ? ` <span class="tag warn">${esc(p.status)}</span>` : '');
   return `<span class="who">${esc(p.name)}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${extra}</small></span>`;
 }
 

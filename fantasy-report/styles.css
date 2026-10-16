@@ -20,8 +20,8 @@ button.league small { display:block; font-weight:400; color:var(--muted); }
 .who { flex:1; } .who small { display:block; color:var(--muted); }
 .pts { font-variant-numeric:tabular-nums; font-weight:600; }
 .tag { font-size:.72rem; font-weight:700; padding:1px 6px; border-radius:4px; border:1px solid currentColor; }
-.tag.start { background:var(--fg); color:var(--bg); }
-.tag.sit { border-style:dashed; text-decoration:line-through; }
+.tag.start { background:var(--green); color:var(--on-green); border-color:var(--green); }
+.tag.sit { background:var(--red); color:var(--on-red); border-color:var(--red); }
 .tag.warn { border-style:dotted; }
 .summary { padding:12px 14px; border-radius:10px; background:var(--card); border:1px solid var(--line); margin-top:16px; }
 #status.error { font-weight:700; text-decoration:underline; }

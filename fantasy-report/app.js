@@ -79,8 +79,9 @@ const matchup = (p) => (p.playing ? (p.opp ? `${p.team} vs ${p.opp}` : `${p.team
 const pts = (n) => (typeof n === 'number' ? n.toFixed(1) : '-');
 
 function playerLine(p, extra = '', tone = '', badge = '') {
-  const flag = (p.bye ? ' <span class="tag warn">BYE</span>' : '') + (p.status ? ` <span class="tag warn">${esc(p.status)}</span>` : '');
-  return `<span class="who ${tone ? `tone-${tone}` : ''}"><span class="nm">${esc(p.name)}</span>${badge ? ` ${badge}` : ''}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${p.trendNote ? ` · ${p.trendNote}` : ''}${extra}</small></span>`;
+  const questionable = p.status === 'Questionable';
+  const flag = (p.bye ? ' <span class="tag warn">BYE</span>' : '') + (p.status ? ` <span class="tag ${questionable ? 'quest' : 'warn'}">${esc(p.status)}</span>` : '');
+  return `<span class="who ${tone ? `tone-${tone}` : ''}${questionable ? ' questionable' : ''}"><span class="nm">${esc(p.name)}</span>${badge ? ` ${badge}` : ''}${flag}<small>${esc(p.pos)} · ${esc(matchup(p))}${p.rostered != null ? ` · ${p.rostered}% rostered` : ''}${p.trendNote ? ` · ${p.trendNote}` : ''}${extra}</small></span>`;
 }
 
 function render(leagueName, week, r, trendUnit = 'adds') {
